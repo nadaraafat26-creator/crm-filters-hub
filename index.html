@@ -106,6 +106,7 @@ const T = {
     pwLabel:"كلمة المرور", pwPh:"أدخل كلمة المرور...", loginBtn:"دخول", wrongPw:"كلمة المرور غير صحيحة",
     stepsModalTitle:"خطوات الفلتر", noSteps:"لا توجد خطوات مضافة لهذا الفلتر.", closeBtn:"إغلاق",
     cardImage:"صورة الكارت",
+    categoryLabel:"التصنيف *", categoryPh:"اختر تصنيف الفلتر",
     settingsTitle:"إعدادات الموقع", themeColor:"لون الموقع", siteName:"اسم الموقع", siteSubtitle:"وصف الموقع", saveSettings:"حفظ الإعدادات", settingsSaved:"تم حفظ الإعدادات ✅",
     settingsBtn:"⚙️ الإعدادات",
   },
@@ -138,21 +139,31 @@ const T = {
     pwLabel:"Password", pwPh:"Enter password...", loginBtn:"Login", wrongPw:"Incorrect password",
     stepsModalTitle:"Filter Steps", noSteps:"No steps added for this filter.", closeBtn:"Close",
     cardImage:"Card Image",
+    categoryLabel:"Category *", categoryPh:"Select filter category",
     settingsTitle:"Site Settings", themeColor:"Site Color", siteName:"Site Name", siteSubtitle:"Site Description", saveSettings:"Save Settings", settingsSaved:"Settings saved ✅",
     settingsBtn:"⚙️ Settings",
   }
 };
 
+
+const CATEGORIES = [
+  { id:"all",      ar:"الكل",      en:"All" },
+  { id:"payment",  ar:"Payment",   en:"Payment" },
+  { id:"finance",  ar:"Finance",   en:"Finance" },
+  { id:"contacts", ar:"Contacts",  en:"Contacts" },
+  { id:"requests", ar:"Requests",  en:"Requests" },
+];
+
 const SAMPLES = [
   { id:"s1", title:"العملاء المهتمين جداً دون تواصل منذ 3 أيام", crmUrl:"https://app.hubspot.com/contacts/sample-1",
     description:"يظهر هذا الفلتر جميع العملاء المحتملين المصنفين كـ 'مهتم جداً' والذين لم يتم إرسال إيميل أو إجراء مكالمة معهم في آخر 3 أيام.",
     imageUrl:getAutoImage("العملاء المهتمين"),
-    steps:["افتح HubSpot وادخل على Contacts","اضغط على زرار Filters في أعلى الصفحة","اختر Last Activity Date ثم اضبطه على أكثر من 3 أيام","أضف فلتر Lifecycle Stage = Lead","اضغط Apply واحفظ الفلتر"],
+    category:"contacts", steps:["افتح HubSpot وادخل على Contacts","اضغط على زرار Filters في أعلى الصفحة","اختر Last Activity Date ثم اضبطه على أكثر من 3 أيام","أضف فلتر Lifecycle Stage = Lead","اضغط Apply واحفظ الفلتر"],
     stepsImage:null, createdBy:"النظام", createdAt:new Date().toISOString() },
   { id:"s2", title:"صفقات مفتوحة منذ أكثر من 30 يوماً بدون نشاط", crmUrl:"https://app.hubspot.com/contacts/sample-2",
     description:"قائمة بجميع الصفقات المفتوحة التي لم يتم تسجيل أي نشاط عليها منذ أكثر من 30 يوماً.",
     imageUrl:getAutoImage("صفقات مفتوحة"),
-    steps:["ادخل على Deals من القائمة الجانبية","اضغط على Filters","اختر Last Activity Date أكثر من 30 يوم","اختر Deal Stage = Open","اضغط Apply واحفظ"],
+    category:"finance", steps:["ادخل على Deals من القائمة الجانبية","اضغط على Filters","اختر Last Activity Date أكثر من 30 يوم","اختر Deal Stage = Open","اضغط Apply واحفظ"],
     stepsImage:null, createdBy:"النظام", createdAt:new Date().toISOString() },
 ];
 
@@ -274,8 +285,13 @@ function FilterCard({ filter, onCopy, onViewSteps, onEdit, onDelete, t }) {
         <img src={filter.imageUrl||getAutoImage(filter.title)} alt={filter.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={e=>{e.target.onerror=null;e.target.src=DEF_IMAGE;}}/>
-        <div className="absolute top-3 right-3">
-          <span className="bg-theme text-white text-[10px] px-2.5 py-1 rounded-full font-bold shadow-sm">HubSpot • Sales</span>
+        <div className="absolute top-3 right-3 flex gap-1 flex-wrap justify-end">
+          <span className="bg-theme text-white text-[10px] px-2.5 py-1 rounded-full font-bold shadow-sm">HubSpot</span>
+          {filter.category && (
+            <span className="bg-white/90 text-[10px] px-2.5 py-1 rounded-full font-bold shadow-sm" style={{color:"var(--clr-dark)"}}>
+              {CATEGORIES.find(c=>c.id===filter.category)?.[t?.lang==="ar"?"ar":"en"] || filter.category}
+            </span>
+          )}
         </div>
         {hasSteps && (
           <div className="absolute top-3 left-3">
@@ -340,6 +356,7 @@ function FilterCard({ filter, onCopy, onViewSteps, onEdit, onDelete, t }) {
 function FilterForm({ onClose, onSave, showNotif, t, existingFilter }) {
   const isEdit = !!existingFilter;
   const [title,setTitle]=useState(existingFilter?.title||"");
+  const [category,setCategory]=useState(existingFilter?.category||"contacts");
   const [crmUrl,setCrmUrl]=useState(existingFilter?.crmUrl||"");
   const [desc,setDesc]=useState(existingFilter?.description||"");
   const [steps,setSteps]=useState(existingFilter?.steps?.length ? existingFilter.steps : [""]);
@@ -386,7 +403,7 @@ function FilterForm({ onClose, onSave, showNotif, t, existingFilter }) {
 
     await onSave({
       id: isEdit ? existingFilter.id : `f-${Date.now()}`,
-      title:title.trim(), crmUrl:crmUrl.trim(), description:desc.trim(),
+      title:title.trim(), crmUrl:crmUrl.trim(), description:desc.trim(), category,
       imageUrl:finalImg, steps:steps.filter(s=>s.trim()), stepsImage:finalStepsImg,
       createdBy: isEdit ? existingFilter.createdBy : t.me,
       createdAt: isEdit ? existingFilter.createdAt : new Date().toISOString(),
@@ -412,6 +429,17 @@ function FilterForm({ onClose, onSave, showNotif, t, existingFilter }) {
             <label className="block text-xs font-bold text-slate-600 mb-1">{t.filterName}</label>
             <input type="text" required value={title} onChange={e=>setTitle(e.target.value)} placeholder={t.filterNamePh}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm ring-theme focus:outline-none"/>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1">{t.categoryLabel}</label>
+            <div className="grid grid-cols-4 gap-2">
+              {CATEGORIES.filter(c=>c.id!=="all").map(c=>(
+                <button key={c.id} type="button" onClick={()=>setCategory(c.id)}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition ${category===c.id?"text-white border-theme bg-theme":"border-slate-200 hover:bg-slate-50 text-slate-600"}`}>
+                  {c[t.lang]==="ar"?c.ar:c.en}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1">{t.filterLink}</label>
@@ -597,6 +625,7 @@ function App() {
   const [filters,setFilters]=useState([]);
   const [loading,setLoading]=useState(true);
   const [search,setSearch]=useState("");
+  const [selCat,setSelCat]=useState("all");
   const [formFilter,setFormFilter]=useState(null);
   const [stepsFilter,setStepsFilter]=useState(null);
   const [deleteFilter,setDeleteFilter]=useState(null);
@@ -657,7 +686,9 @@ function App() {
 
   const filtered=filters.filter(f=>{
     const q=search.toLowerCase();
-    return f.title?.toLowerCase().includes(q)||f.description?.toLowerCase().includes(q);
+    const matchSearch = f.title?.toLowerCase().includes(q)||f.description?.toLowerCase().includes(q);
+    const matchCat = selCat==="all" || f.category===selCat;
+    return matchSearch && matchCat;
   });
 
   if(!authed) return <LoginScreen onLogin={handleLogin} lang={lang} setLang={setLang}/>;
@@ -701,13 +732,32 @@ function App() {
       </header>
 
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="relative">
+        <div className="max-w-7xl mx-auto px-4 pt-4 pb-0">
+          {/* Search input */}
+          <div className="relative mb-3">
             <svg className={`absolute ${t.dir==="rtl"?"right-3":"left-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
             <input type="text" placeholder={t.searchPlaceholder} value={search} onChange={e=>setSearch(e.target.value)}
               className={`w-full ${t.dir==="rtl"?"pr-10 pl-4":"pl-10 pr-4"} py-2.5 border border-slate-200 rounded-xl text-sm ring-theme focus:outline-none`}/>
+          </div>
+          {/* Category tabs */}
+          <div className="flex gap-1 overflow-x-auto pb-0" style={{scrollbarWidth:"none"}}>
+            {CATEGORIES.map(c=>(
+              <button key={c.id} onClick={()=>setSelCat(c.id)}
+                className="relative whitespace-nowrap px-4 py-2.5 text-sm font-bold transition-colors flex-shrink-0"
+                style={{
+                  color: selCat===c.id ? "var(--clr)" : "#64748b",
+                  borderBottom: selCat===c.id ? "2px solid var(--clr)" : "2px solid transparent",
+                }}>
+                {t.lang==="ar" ? c.ar : c.en}
+                {c.id!=="all" && (
+                  <span className="mr-1 ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{background: selCat===c.id?"var(--clr-light)":"#f1f5f9", color: selCat===c.id?"var(--clr)":"#94a3b8"}}>
+                    {filters.filter(f=>f.category===c.id).length}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
       </div>
